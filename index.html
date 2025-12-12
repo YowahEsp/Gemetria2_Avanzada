@@ -539,9 +539,8 @@
                             </g>
                         </svg>
                     </div>
-                    <div class="formula" style="font-size: 12px; line-height: 1.5;">A = 2(ab+ac+bc)<br>V = A<sub>base</sub>·h</div>
+                    <div class="formula" style="font-size: 12px; line-height: 1.5;">A ≈ 2(ab+ac+bc)<br>V = A<sub>base</sub>·h</div>
                 </div>
-
                 <div class="figure-card" onclick="open3DModal('cuna')">
                     <div class="figure-title">Cuña (Wedge)</div>
                     <div class="figure-container">
@@ -566,7 +565,6 @@
                     </div>
                     <div class="formula" style="font-size: 12px; line-height: 1.5;">V ≈ πh<div class="frac"><span class="frac-numer">(2D²+d²)</span><span class="frac-denom">12</span></div></div>
                 </div>
-                
                 <div class="figure-card" onclick="open3DModal('cubo_truncado')">
                     <div class="figure-title">Cubo Truncado</div>
                     <div class="figure-container">
@@ -703,28 +701,7 @@
                 <div class="figure-card" onclick="open3DModal('hiperboloide')">
                     <div class="figure-title">Hiperboloide de Revolución</div>
                     <div class="figure-container">
-                        <svg class="figure-svg" viewBox="0 0 200 250">
-                            <path d="M 60 50 
-                                     Q 90 125 60 200 
-                                     A 40 10 0 0 0 140 200 
-                                     Q 110 125 140 50 
-                                     A 40 10 0 0 0 60 50 Z" 
-                                  fill="#87ceeb" opacity="0.6" stroke="#5dade2" stroke-width="1"/>
-                            
-                            <path d="M 60 50 Q 90 125 60 200" 
-                                  fill="none" stroke="#5dade2" stroke-width="2" opacity="0.4"/>
-                            
-                            <path d="M 140 50 Q 110 125 140 200" 
-                                  fill="none" stroke="#87ceeb" stroke-width="2" opacity="0.4"/>
-                            
-                            <ellipse cx="100" cy="200" rx="40" ry="10" 
-                                     fill="none" stroke="#2980b9" stroke-width="2.5"
-                                     stroke-dasharray="6,4"/>
-                            
-                            <ellipse cx="100" cy="50" rx="40" ry="10" 
-                                     fill="none" stroke="#2980b9" stroke-width="2.5"
-                                     stroke-dasharray="6,4"/>
-                        </svg>
+                        <div id="mini-hiperboloide" class="mini-3d-container"></div>
                     </div>
                     <div class="formula" style="font-size: 12px; line-height: 1.5;">(x²/a²) + (y²/b²) - (z²/c²) = 1</div>
                 </div>
@@ -757,7 +734,6 @@
             <p class="controls-hint">Usa el mouse para rotar | Zoom con rueda | Arrastra para mover</p>
         </div>
     </div>
-
     <script>
         let currentModal = null;
         let currentScene = null;
@@ -767,7 +743,6 @@
         let currentMesh = null;
         let animationFrameId = null;
         let miniScenes = {};
-
         const shearMatrix = new THREE.Matrix4();
         shearMatrix.set(
             1, 0, 0, 0,
@@ -775,7 +750,6 @@
             0, 0, 1, 0,
             0, 0, 0, 1
         );
-        
         function createEdgeCircle(radius, yPos, isDashed, color = 0x2c3e50) {
             const segments = 64;
             const points = [];
@@ -795,11 +769,9 @@
             if (isDashed) line.computeLineDistances();
             return line;
         }
-
         function createModalEdgeCircle(radius, yPos, isDashed) {
             return createEdgeCircle(radius, yPos, isDashed, 0xffffff);
         }
-
         function createSimpleEdgeCircle(radius, yPos, isDashed, color = 0x2c3e50) {
             const segments = 64;
             const points = [];
@@ -818,37 +790,29 @@
             if (isDashed) line.computeLineDistances();
             return line;
         }
-
         function createSimpleModalEdgeCircle(radius, yPos, isDashed) {
             return createSimpleEdgeCircle(radius, yPos, isDashed, 0xffffff);
         }
-
         function createBarrelGeometry(topRadius = 0.7, maxRadius = 1.0, height = 2.0, segments = 32, heightSegments = 24) {
             const geometry = new THREE.BufferGeometry();
             const vertices = [];
             const indices = [];
             const normals = [];
-            
             function getRadius(t) {
                 const radiusDiff = maxRadius - topRadius;
                 return maxRadius - radiusDiff * t * t;
             }
-            
             for (let i = 0; i <= heightSegments; i++) {
                 const v = i / heightSegments;
                 const y = (v - 0.5) * height;
                 const t = (v - 0.5) * 2;
                 const radius = getRadius(t);
-                
                 for (let j = 0; j <= segments; j++) {
                     const u = j / segments;
                     const theta = u * Math.PI * 2;
-                    
                     const x = Math.cos(theta) * radius;
                     const z = Math.sin(theta) * radius;
-                    
                     vertices.push(x, y, z);
-                    
                     const derivative = -2 * (maxRadius - topRadius) * t;
                     const nx = Math.cos(theta);
                     const ny = -derivative;
@@ -857,62 +821,50 @@
                     normals.push(nx/len, ny/len, nz/len);
                 }
             }
-            
             for (let i = 0; i < heightSegments; i++) {
                 for (let j = 0; j < segments; j++) {
                     const a = i * (segments + 1) + j;
                     const b = a + segments + 1;
                     const c = a + 1;
                     const d = b + 1;
-                    
                     indices.push(a, b, c);
                     indices.push(b, d, c);
                 }
             }
-            
             const bottomCenterIndex = vertices.length / 3;
             vertices.push(0, -height/2, 0);
             normals.push(0, -1, 0);
-            
             for (let j = 0; j < segments; j++) {
                 const a = j;
                 const b = j + 1;
                 indices.push(bottomCenterIndex, b, a);
             }
-            
             const topCenterIndex = vertices.length / 3;
             vertices.push(0, height/2, 0);
             normals.push(0, 1, 0);
-            
             const topRowStart = heightSegments * (segments + 1);
             for (let j = 0; j < segments; j++) {
                 const a = topRowStart + j;
                 const b = topRowStart + j + 1;
                 indices.push(topCenterIndex, a, b);
             }
-            
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
             geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
             geometry.setIndex(indices);
-            
             return geometry;
         }
-
         function pushVertex(arr, x, y, z){
             arr.push(x, y, z);
             return (arr.length / 3) - 1;
         }
         function addTri(indices, a, b, c){ indices.push(a, b, c); }
         function addQuad(indices, a, b, c, d){ addTri(indices, a, b, c); addTri(indices, a, c, d); }
-
         function createGyroElongatedPentagonalBicupola(radius = 1.0, cupolaHeight = 0.45, prismHeight = 0.95) {
             const verts = [];
             const indices = [];
-
             const nPent = 5;
             const nDec = 10;
             const decRadius = radius * 1.6;
-
             const pentTop = [];
             const pentBottom = [];
             for(let i=0;i<nPent;i++){
@@ -924,7 +876,6 @@
                 pentTop.push(pushVertex(verts, x, y, zTop));
                 pentBottom.push(pushVertex(verts, x, y, zBottom));
             }
-
             const decTop = [];
             const decBottom = [];
             for(let i=0;i<nDec;i++){
@@ -935,13 +886,11 @@
                 const ang = ((i + 0.5) / nDec) * Math.PI * 2;
                 decBottom.push(pushVertex(verts, Math.cos(ang) * decRadius, Math.sin(ang) * decRadius, -prismHeight/2));
             }
-
             for(let i=0;i<nDec;i++){
                 const inext = (i+1) % nDec;
                 addTri(indices, decTop[i], decBottom[i], decBottom[inext]);
                 addTri(indices, decTop[i], decBottom[inext], decTop[inext]);
             }
-
             for(let i=0;i<nPent;i++){
                 const dA = (2*i) % nDec;
                 const dB = (2*i + 1) % nDec;
@@ -951,7 +900,6 @@
                 const dC = (2*(i+1)) % nDec;
                 addQuad(indices, decTop[dB], decTop[dC], nextP, p);
             }
-
             for(let i=0;i<nPent;i++){
                 const dA = (2*i) % nDec;
                 const dB = (2*i + 1) % nDec;
@@ -961,7 +909,6 @@
                 const dC = (2*(i+1)) % nDec;
                 addQuad(indices, decBottom[dA], decBottom[dC], nextP, p);
             }
-
             const centerTop = pushVertex(verts, 0, 0, prismHeight/2 + cupolaHeight + 0.0001);
             for(let i=0;i<nPent;i++){
                 const a = pentTop[i];
@@ -974,16 +921,356 @@
                 const b = pentBottom[(i+1)%nPent];
                 addTri(indices, centerBottom, b, a);
             }
-
             const geometry = new THREE.BufferGeometry();
             const position = new Float32Array(verts);
             geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
             geometry.setIndex(indices);
             geometry.computeVertexNormals();
-
             return geometry;
         }
-
+        function addTextLabel(scene, text, position) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256; 
+            canvas.height = 128;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.font = 'Bold 96px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            context.lineWidth = 8;
+            context.strokeText(text, 128, 64);
+            context.fillStyle = 'white';
+            context.fillText(text, 128, 64);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 1.0, 
+                depthTest: false,
+                depthWrite: false
+            });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.copy(position);
+            sprite.scale.set(1, 0.5, 1);
+            scene.add(sprite);
+        }
+        function createDashedLine(start, end, material) {
+            const points = [start, end];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, material);
+            line.computeLineDistances();
+            return line;
+        }
+        function addDimensionLines(scene, figura, currentMesh) {
+            const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
+            const dashedMat = new THREE.LineDashedMaterial({ 
+                color: 0xff0000, 
+                linewidth: 2, 
+                dashSize: 0.2, 
+                gapSize: 0.1 
+            });
+            switch(figura) {
+                case 'paralelepipedo_oblicuo':
+                    const hStart = new THREE.Vector3(2.5, 2.7, -2.3); 
+                    const hEnd = new THREE.Vector3(2.5, 0, -2.3);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([hStart, hEnd]), dashedMat));
+                    addTextLabel(scene, 'h', new THREE.Vector3(2.6, 1.35, -2.3));
+                    const aStart = new THREE.Vector3(0, 0, 1.0);
+                    const aEnd = new THREE.Vector3(1.0, 0, 0.5);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([aStart, aEnd]), lineMaterial));
+                    addTextLabel(scene, 'a', new THREE.Vector3(0.5, -0.2, 0.75));
+                    const bStart = new THREE.Vector3(0, 0, 0);
+                    const bEnd = new THREE.Vector3(-1.0, 0, 0.5);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([bStart, bEnd]), lineMaterial));
+                    addTextLabel(scene, 'b', new THREE.Vector3(-0.5, -0.2, 0.25));
+                    const cStart = new THREE.Vector3(1.0, 0, 0.5);
+                    const cEnd = new THREE.Vector3(3.5, 2.7, -1.8);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([cStart, cEnd]), lineMaterial));
+                    addTextLabel(scene, 'c', new THREE.Vector3(2.25, 1.35, -0.65));
+                    break;
+                case 'cuna':
+                    const aPoints = [new THREE.Vector3(-2, -2, 2), new THREE.Vector3(2, -2, 2)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(aPoints), lineMaterial));
+                    addTextLabel(scene, 'a', new THREE.Vector3(0, -2.3, 2));
+                    const bPoints = [new THREE.Vector3(2, -2, 2), new THREE.Vector3(2, -2, -2)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bPoints), lineMaterial));
+                    addTextLabel(scene, 'b', new THREE.Vector3(2.3, -2, 0));
+                    const cPoints = [new THREE.Vector3(-2, -2, 2), new THREE.Vector3(-2, 2, 2)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(cPoints), lineMaterial));
+                    addTextLabel(scene, 'c', new THREE.Vector3(-2.5, 0, 2));
+                    break;
+                case 'tetraedro_truncado':
+                    if (currentMesh && currentMesh.geometry) {
+                        const positions = currentMesh.geometry.attributes.position.array;
+                        const v1 = new THREE.Vector3(positions[0], positions[1], positions[2]);
+                        let closestV = new THREE.Vector3(positions[3], positions[4], positions[5]);
+                        let minDirectDist = 999;
+                        for(let i = 3; i < positions.length; i += 3) {
+                            const tempV = new THREE.Vector3(positions[i], positions[i+1], positions[i+2]);
+                            const dist = v1.distanceTo(tempV);
+                            if(dist > 0.1 && dist < minDirectDist) {
+                                minDirectDist = dist;
+                                closestV = tempV;
+                            }
+                        }
+                        const geometryLine = new THREE.BufferGeometry().setFromPoints([v1, closestV]);
+                        const line = new THREE.Line(geometryLine, lineMaterial);
+                        line.renderOrder = 999; 
+                        line.onBeforeRender = function(renderer) { renderer.clearDepth(); };
+                        scene.add(line);
+                        const midPoint = new THREE.Vector3().addVectors(v1, closestV).multiplyScalar(0.5);
+                        const offsetDir = midPoint.clone().normalize().multiplyScalar(0.5);
+                        midPoint.add(offsetDir);
+                        addTextLabel(scene, 'a', midPoint);
+                    }
+                    break;
+                case 'barril':
+                    const barH = [new THREE.Vector3(1.3, -1, 0), new THREE.Vector3(1.3, 1, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(barH), lineMaterial));
+                    addTextLabel(scene, 'h', new THREE.Vector3(1.5, 0, 0));
+                    const barD = [new THREE.Vector3(-1.0, 0, 0), new THREE.Vector3(1.0, 0, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(barD), dashedMat));
+                    addTextLabel(scene, 'D', new THREE.Vector3(0, 0.2, 0));
+                    const bard = [new THREE.Vector3(-0.7, -1, 0), new THREE.Vector3(0.7, -1, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bard), dashedMat));
+                    addTextLabel(scene, 'd', new THREE.Vector3(0, -1.2, 0));
+                    break;
+                case 'cubo_truncado':
+                    const k_ct = Math.sqrt(2) - 1;
+                    const ctP1 = new THREE.Vector3(2.5, 2.5, 2.5 * k_ct);
+                    const ctP2 = new THREE.Vector3(2.5, 2.5 * k_ct, 2.5);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([ctP1, ctP2]), lineMaterial));
+                    const midCubo = ctP1.clone().add(ctP2).multiplyScalar(0.5);
+                    addTextLabel(scene, 'a', midCubo);
+                    break;
+                case 'cuboctaedro':
+                    const coP1 = new THREE.Vector3(1.3, 1.3, 0);
+                    const coP2 = new THREE.Vector3(1.3, -1.3, 0);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([coP1, coP2]), lineMaterial));
+                    addTextLabel(scene, 'a', new THREE.Vector3(1.5, 0, 0));
+                    break;
+                case 'piramide_pentagonal':
+                    if (currentMesh && currentMesh.geometry) {
+                        const positions = currentMesh.geometry.attributes.position.array;
+                        const baseVerticesPent = [];
+                        let apexPent = null;
+                        for (let i = 0; i < positions.length; i += 3) {
+                            const y = positions[i + 1];
+                            if (Math.abs(y + 2.5) < 0.01) {
+                                baseVerticesPent.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
+                            } else if (Math.abs(y - 2.5) < 0.01 && !apexPent) {
+                                apexPent = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+                            }
+                        }
+                        const uniqueVerticesPent = [];
+                        baseVerticesPent.forEach(v => {
+                            if (!uniqueVerticesPent.some(uv => uv.distanceTo(v) < 0.01)) {
+                                uniqueVerticesPent.push(v);
+                            }
+                        });
+                        if (uniqueVerticesPent.length >= 2 && apexPent) {
+                            const centerBase = new THREE.Vector3(0, -2.5, 0);
+                            const heightLine = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([centerBase, apexPent]),
+                                dashedMat
+                            );
+                            heightLine.computeLineDistances();
+                            scene.add(heightLine);
+                            addTextLabel(scene, 'h', new THREE.Vector3(0.3, 0, 0));
+                            const v1 = uniqueVerticesPent[0];
+                            const v2 = uniqueVerticesPent[1];
+                            const edgeLinePent = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([v1, v2]),
+                                lineMaterial
+                            );
+                            scene.add(edgeLinePent);
+                            const edgeMid = v1.clone().add(v2).multiplyScalar(0.5);
+                            edgeMid.y -= 0.45;
+                            // CAMBIADO: era 'a', ahora es 'L'
+                            addTextLabel(scene, 'L', edgeMid);
+                            const apbLine = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([centerBase, edgeMid.clone().setY(-2.5)]),
+                                dashedMat
+                            );
+                            apbLine.computeLineDistances();
+                            scene.add(apbLine);
+                            const apbMid = centerBase.clone().add(edgeMid.clone().setY(-2.5)).multiplyScalar(0.5);
+                            apbMid.y -= 0.25;
+                            addTextLabel(scene, 'apb', apbMid);
+                            const lateralApothemLine = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([apexPent, edgeMid.clone().setY(-2.5)]),
+                                lineMaterial
+                            );
+                            scene.add(lateralApothemLine);
+                            const lateralMid = apexPent.clone().add(edgeMid.clone().setY(-2.5)).multiplyScalar(0.5);
+                            lateralMid.x += 0.5;
+                            // CAMBIADO: era 'L', ahora es 'a'
+                            addTextLabel(scene, 'a', lateralMid);
+                        }
+                    }
+                    break;
+                case 'piramide_hexagonal':
+                    if (currentMesh && currentMesh.geometry) {
+                        const positions = currentMesh.geometry.attributes.position.array;
+                        const baseVerticesHex = [];
+                        let apexHex = null;
+                        for (let i = 0; i < positions.length; i += 3) {
+                            const y = positions[i + 1];
+                            if (Math.abs(y + 2.5) < 0.01) {
+                                baseVerticesHex.push(new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]));
+                            } else if (Math.abs(y - 2.5) < 0.01 && !apexHex) {
+                                apexHex = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+                            }
+                        }
+                        const uniqueVerticesHex = [];
+                        baseVerticesHex.forEach(v => {
+                            if (!uniqueVerticesHex.some(uv => uv.distanceTo(v) < 0.01)) {
+                                uniqueVerticesHex.push(v);
+                            }
+                        });
+                        if (uniqueVerticesHex.length >= 2 && apexHex) {
+                            const centerBase = new THREE.Vector3(0, -2.5, 0);
+                            const heightLine = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([centerBase, apexHex]),
+                                dashedMat
+                            );
+                            heightLine.computeLineDistances();
+                            scene.add(heightLine);
+                            addTextLabel(scene, 'h', new THREE.Vector3(0.3, 0, 0));
+                            const v1 = uniqueVerticesHex[0];
+                            const v2 = uniqueVerticesHex[1];
+                            const edgeLineHex = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([v1, v2]),
+                                lineMaterial
+                            );
+                            scene.add(edgeLineHex);
+                            const edgeMid = v1.clone().add(v2).multiplyScalar(0.5);
+                            edgeMid.y -= 0.45;
+                            // CAMBIADO: era 'a', ahora es 'L'
+                            addTextLabel(scene, 'L', edgeMid);
+                            const apbLine = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([centerBase, edgeMid.clone().setY(-2.5)]),
+                                dashedMat
+                            );
+                            apbLine.computeLineDistances();
+                            scene.add(apbLine);
+                            const apbMid = centerBase.clone().add(edgeMid.clone().setY(-2.5)).multiplyScalar(0.5);
+                            apbMid.y -= 0.25;
+                            addTextLabel(scene, 'apb', apbMid);
+                            const lateralApothemLine = new THREE.Line(
+                                new THREE.BufferGeometry().setFromPoints([apexHex, edgeMid.clone().setY(-2.5)]),
+                                lineMaterial
+                            );
+                            scene.add(lateralApothemLine);
+                            const lateralMid = apexHex.clone().add(edgeMid.clone().setY(-2.5)).multiplyScalar(0.5);
+                            lateralMid.x += 0.5;
+                            // CAMBIADO: era 'L', ahora es 'a'
+                            addTextLabel(scene, 'a', lateralMid);
+                        }
+                    }
+                    break;
+                case 'bicupula':
+                    const angle1 = 0;
+                    const angle2 = (1/5) * Math.PI * 2;
+                    const bRad = 1.0;
+                    const bZ = 0.95/2 + 0.45;
+                    const v1 = new THREE.Vector3(Math.cos(angle1)*bRad, Math.sin(angle1)*bRad, bZ);
+                    const v2 = new THREE.Vector3(Math.cos(angle2)*bRad, Math.sin(angle2)*bRad, bZ);
+                    const euler = new THREE.Euler(-0.2, 0.6, 0);
+                    v1.applyEuler(euler);
+                    v2.applyEuler(euler);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([v1, v2]), lineMaterial));
+                    const mid = v1.clone().add(v2).multiplyScalar(0.5).add(new THREE.Vector3(0,0.2,0));
+                    addTextLabel(scene, 'a', mid);
+                    const hTop = new THREE.Vector3(2.5, 1.0, 0); 
+                    const hBot = new THREE.Vector3(2.5, -1.0, 0);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([hTop, hBot]), dashedMat));
+                    addTextLabel(scene, 'h', new THREE.Vector3(2.8, 0, 0));
+                    break;
+                case 'capsula':
+                    const capR = [new THREE.Vector3(0, 1.5, 0), new THREE.Vector3(1.5, 1.5, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(capR), lineMaterial));
+                    addTextLabel(scene, 'r', new THREE.Vector3(0.75, 1.7, 0));
+                    const capH = [new THREE.Vector3(1.7, -1.5, 0), new THREE.Vector3(1.7, 1.5, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(capH), lineMaterial));
+                    addTextLabel(scene, 'h', new THREE.Vector3(2.0, 0, 0));
+                    break;
+                case 'cilindro_oblicuo':
+                    const cilH = [new THREE.Vector3(3.0, -2.5, 0), new THREE.Vector3(3.0, 2.5, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(cilH), lineMaterial));
+                    addTextLabel(scene, 'h', new THREE.Vector3(3.3, 0, 0));
+                    const cilR = [new THREE.Vector3(0, -2.5, 0), new THREE.Vector3(2.5, -2.5, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(cilR), lineMaterial));
+                    addTextLabel(scene, 'r', new THREE.Vector3(1.25, -2.7, 0));
+                    break;
+                case 'cono_oblicuo':
+                    const conH = [new THREE.Vector3(-3.0, -2.5, 0), new THREE.Vector3(-3.0, 2.5, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(conH), lineMaterial));
+                    scene.add(createDashedLine(new THREE.Vector3(-3.0, 2.5, 0), new THREE.Vector3(1.25, 2.5, 0), dashedMat));
+                    addTextLabel(scene, 'h', new THREE.Vector3(-3.3, 0, 0));
+                    const conR = [new THREE.Vector3(0, -2.5, 0), new THREE.Vector3(2.5, -2.5, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(conR), lineMaterial));
+                    addTextLabel(scene, 'r', new THREE.Vector3(1.25, -2.7, 0));
+                    break;
+                case 'esferoide':
+                    const esfA_start = new THREE.Vector3(0, -3.75, 0);
+                    const esfA_end = new THREE.Vector3(0, 3.75, 0);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([esfA_start, esfA_end]), lineMaterial));
+                    addTextLabel(scene, 'a', new THREE.Vector3(0.3, 0, 0));
+                    const esfB_start = new THREE.Vector3(0, -3.75, 0);
+                    const esfB_end = new THREE.Vector3(2.5, -3.75, 0);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([esfB_start, esfB_end]), lineMaterial));
+                    addTextLabel(scene, 'b', new THREE.Vector3(1.25, -4.0, 0));
+                    break;
+                case 'esferoide_oblato':
+                    const oblA_start = new THREE.Vector3(0, 1.75, 0);
+                    const oblA_end = new THREE.Vector3(3.75, 1.75, 0);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([oblA_start, oblA_end]), lineMaterial));
+                    addTextLabel(scene, 'a', new THREE.Vector3(1.8, 2.0, 0));
+                    const oblC_start = new THREE.Vector3(0, 0, 0);
+                    const oblC_end = new THREE.Vector3(0, 1.75, 0);
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([oblC_start, oblC_end]), lineMaterial));
+                    addTextLabel(scene, 'c', new THREE.Vector3(0.3, 0.8, 0));
+                    break;
+                case 'hiperboloide':
+                    const matDashedHyp = new THREE.LineDashedMaterial({ 
+                        color: 0xff0000, 
+                        dashSize: 0.2, 
+                        gapSize: 0.1 
+                    });
+                    const matSolidHyp = new THREE.LineBasicMaterial({ color: 0xff0000 });
+                    
+                    const axis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(0, -4, 0), 
+                        new THREE.Vector3(0, 4, 0)
+                    ]), matDashedHyp);
+                    axis.computeLineDistances();
+                    scene.add(axis);
+                    
+                    const aLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+                        new THREE.Vector3(0, 0, 0), 
+                        new THREE.Vector3(1.5, 0, 0)
+                    ]), matSolidHyp);
+                    scene.add(aLine);
+                    
+                    addTextLabel(scene, 'a', new THREE.Vector3(0.75, -0.3, 0));
+                    addTextLabel(scene, 'h', new THREE.Vector3(-0.6, 0, 0));
+                    break;
+                case 'tronco_esfera':
+                    const tr1 = [new THREE.Vector3(0, 2.12, 0), new THREE.Vector3(2.12, 2.12, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(tr1), lineMaterial));
+                    addTextLabel(scene, 'r₁', new THREE.Vector3(1.0, 2.4, 0));
+                    const tr2 = [new THREE.Vector3(0, -2.12, 0), new THREE.Vector3(2.12, -2.12, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(tr2), lineMaterial));
+                    addTextLabel(scene, 'r₂', new THREE.Vector3(1.0, -2.4, 0));
+                    const trH = [new THREE.Vector3(3.5, -2.12, 0), new THREE.Vector3(3.5, 2.12, 0)];
+                    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(trH), lineMaterial));
+                    addTextLabel(scene, 'h', new THREE.Vector3(3.8, 0, 0));
+                    break;
+            }
+        }
         function openModal(figura) {
             const modal = document.getElementById('modal');
             const titleElem = document.getElementById('modal-title');
@@ -1084,14 +1371,12 @@
                 currentModal = modal;
             }
         }
-
         function closeModal() {
             const modal = document.getElementById('modal');
             modal.style.display = "none";
             document.body.style.overflow = 'auto';
             currentModal = null;
         }
-
         function disposeMiniScenes() {
             Object.values(miniScenes).forEach(sceneData => {
                 if (sceneData) {
@@ -1103,14 +1388,14 @@
             });
             miniScenes = {};
         }
-
         function initializeMini3DScenes() {
             const figures = [
                 'tetraedro_truncado',
                 'barril',
                 'piramide_pentagonal', 'piramide_hexagonal', 'bicupula',
                 'capsula',
-                'cilindro_oblicuo', 'cono_oblicuo', 'esferoide', 'esferoide_oblato', 'tronco_esfera'
+                'cilindro_oblicuo', 'cono_oblicuo', 'esferoide', 'esferoide_oblato', 'tronco_esfera',
+                'hiperboloide'
             ];
             figures.forEach(figura => {
                 const container = document.getElementById(`mini-${figura}`);
@@ -1119,13 +1404,12 @@
                 }
             });
         }
-
         function setupMini3DScene(container, figura) {
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0xf5f7fa);
             const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.position.set(0, 0, 5);
-            camera.lookAt(0, 0, 0); // Asegurar que mira al centro
+            camera.lookAt(0, 0, 0);
             const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
@@ -1137,11 +1421,9 @@
             directionalLight.position.set(5, 5, 5);
             scene.add(directionalLight);
             const r = 1.2, h = 2.5;
-
             if (figura === 'cilindro_oblicuo') {
                 const geometry = new THREE.CylinderGeometry(r, r, h, 32);
                 geometry.applyMatrix4(shearMatrix);
-
                 const lateralMaterial = new THREE.MeshStandardMaterial({
                     color: 0xa8d5e2,
                     metalness: 0.2,
@@ -1157,16 +1439,13 @@
                     opacity: 0.95
                 });
                 const mesh = new THREE.Mesh(geometry, [lateralMaterial, baseMaterial, baseMaterial]);
-                mesh.position.set(0, 0, 0); // Centrar explícitamente
+                mesh.position.set(0, 0, 0);
                 scene.add(mesh);
-
                 scene.add(createEdgeCircle(r, h/2, true));
                 scene.add(createEdgeCircle(r, -h/2, true));
-
             } else if (figura === 'cono_oblicuo') {
                 const geometry = new THREE.ConeGeometry(r, h, 32);
                 geometry.applyMatrix4(shearMatrix);
-
                 const material = new THREE.MeshStandardMaterial({
                     color: 0xcc9900,
                     metalness: 0.2,
@@ -1175,9 +1454,8 @@
                     opacity: 0.85
                 });
                 const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(0, 0, 0); // Centrar explícitamente
+                mesh.position.set(0, 0, 0);
                 scene.add(mesh);
-
                 scene.add(createEdgeCircle(r, -h/2, true));
             } else if (figura === 'barril') {
                 const geometry = createBarrelGeometry(0.9, 1.2, 2.5, 24, 18);
@@ -1189,9 +1467,8 @@
                     opacity: 0.7
                 });
                 const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(0, 0, 0); // Centrar explícitamente
+                mesh.position.set(0, 0, 0);
                 scene.add(mesh);
-
                 const edges = new THREE.EdgesGeometry(geometry, 15);
                 const lineMaterial = new THREE.LineBasicMaterial({ color: 0x6b4423, linewidth: 2 });
                 const wireframe = new THREE.LineSegments(edges, lineMaterial);
@@ -1206,15 +1483,50 @@
                     opacity: 0.7
                 });
                 const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.set(0, 0, 0); // Centrar explícitamente
+                mesh.position.set(0, 0, 0);
                 scene.add(mesh);
-
                 const edges = new THREE.EdgesGeometry(geometry);
                 const lineMaterial = new THREE.LineBasicMaterial({ color: 0x022b3a, linewidth: 2 });
                 const wireframe = new THREE.LineSegments(edges, lineMaterial);
                 mesh.add(wireframe);
                 camera.position.set(0, 0, 3.5);
-                camera.lookAt(0, 0, 0); // Asegurar que mira al centro
+                camera.lookAt(0, 0, 0);
+            } else if (figura === 'hiperboloide') {
+                const a_hyp = 0.6, b_hyp = 0.8, h_hyp = 2.5;
+                const radSegs = 32, heightSegs = 30;
+                const vertices = [];
+                for (let i = 0; i <= heightSegs; i++) {
+                    const v = i / heightSegs;
+                    const y = -h_hyp/2 + v * h_hyp;
+                    const rad = a_hyp * Math.sqrt(1 + (y*y)/(b_hyp*b_hyp));
+                    vertices.push(new THREE.Vector2(rad, y));
+                }
+                const geometry = new THREE.LatheGeometry(vertices, radSegs);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x3498db, 
+                    metalness: 0.2, 
+                    roughness: 0.5, 
+                    transparent: true, 
+                    opacity: 0.7 
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                scene.add(mesh);
+                
+                const r_bot = a_hyp * Math.sqrt(1 + ((-h_hyp/2)*(-h_hyp/2))/(b_hyp*b_hyp));
+                const r_top = a_hyp * Math.sqrt(1 + ((h_hyp/2)*(h_hyp/2))/(b_hyp*b_hyp));
+                
+                const botCap = new THREE.Mesh(new THREE.CircleGeometry(r_bot, radSegs), material);
+                botCap.rotation.x = Math.PI/2; 
+                botCap.position.y = -h_hyp/2; 
+                scene.add(botCap);
+                
+                const topCap = new THREE.Mesh(new THREE.CircleGeometry(r_top, radSegs), material);
+                topCap.rotation.x = Math.PI/2; 
+                topCap.position.y = h_hyp/2; 
+                scene.add(topCap);
+                
+                scene.add(createSimpleEdgeCircle(r_bot, -h_hyp/2, false));
+                scene.add(createSimpleEdgeCircle(r_top, h_hyp/2, false));
             } else {
                 let geometry;
                 const colors = {
@@ -1226,7 +1538,6 @@
                     'esferoide_oblato': 0x9b59b6,
                     'tronco_esfera': 0x2ecc71
                 };
-
                 switch(figura) {
                     case 'tetraedro_truncado':
                         geometry = new THREE.IcosahedronGeometry(1.8, 0);
@@ -1258,34 +1569,27 @@
                     }
                     case 'esferoide':
                         geometry = new THREE.SphereGeometry(1.2, 32, 32);
-                        geometry.scale(1, 1.5, 1); // Prolato: alargado verticalmente
+                        geometry.scale(1, 1.5, 1);
                         break;
                     case 'esferoide_oblato':
                         geometry = new THREE.SphereGeometry(1.2, 32, 32);
-                        geometry.scale(1.5, 0.8, 1.5); // Oblato: achatado verticalmente, más ancho
+                        geometry.scale(1.5, 0.8, 1.5);
                         break;
                     case 'tronco_esfera':
-                        // Radio de la esfera
                         const R_mini = 1.5;
-                        // Ángulos de corte: centrado en el ecuador, de 45° a 135°
-                        const thetaStart_mini = Math.PI * 45 / 180; // 45°
-                        const thetaLength_mini = Math.PI * 90 / 180; // 90° de apertura
-                        
+                        const thetaStart_mini = Math.PI * 45 / 180;
+                        const thetaLength_mini = Math.PI * 90 / 180;
                         geometry = new THREE.SphereGeometry(R_mini, 32, 32, 0, Math.PI * 2, thetaStart_mini, thetaLength_mini);
-                        
-                        // Calcular radios y posiciones exactas de las tapas
                         const r_top_mini = R_mini * Math.sin(thetaStart_mini);
                         const y_top_mini = R_mini * Math.cos(thetaStart_mini);
                         const r_bottom_mini = R_mini * Math.sin(thetaStart_mini + thetaLength_mini);
                         const y_bottom_mini = R_mini * Math.cos(thetaStart_mini + thetaLength_mini);
-                        
                         scene.add(createSimpleEdgeCircle(r_top_mini, y_top_mini, true));
                         scene.add(createSimpleEdgeCircle(r_bottom_mini, y_bottom_mini, true));
                         break;
                     default:
                         geometry = new THREE.BoxGeometry(2, 2, 2);
                 }
-
                 const material = new THREE.MeshStandardMaterial({
                     color: colors[figura] || 0x3498db,
                     metalness: 0.2,
@@ -1295,7 +1599,6 @@
                 });
                 const mesh = new THREE.Mesh(geometry, material);
                 scene.add(mesh);
-
                 if (figura !== 'esferoide' && figura !== 'esferoide_oblato' && figura !== 'tronco_esfera') {
                     const edges = new THREE.EdgesGeometry(geometry);
                     const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
@@ -1303,11 +1606,9 @@
                     mesh.add(wireframe);
                 }
             }
-
             renderer.render(scene, camera);
             miniScenes[figura] = { scene, renderer };
         }
-
         function open3DModal(figura) {
             disposeMiniScenes();
             const modal = document.getElementById('modal3D');
@@ -1333,12 +1634,12 @@
                 'tronco_esfera': 'Tronco de Esfera (Zona Esférica)'
             };
             titleElem.textContent = titles[figura] || figura;
-
             const formulas = {
-                'paralelepipedo_oblicuo': `Área total: A = 2(ab+ac+bc)
-<br>Volumen: V = A<sub>base</sub>·h
+                'paralelepipedo_oblicuo': `Área total: A ≈ 2(ab+ac+bc)
+<br>Volumen: V = A<sub>base</sub>·h = (a·b)·h
 <br><br>Donde:
-<br>a, b, c = dimensiones
+<br>a, b = lados de la base
+<br>c = arista lateral
 <br>h = altura perpendicular
 <br><br>Principio de Cavalieri:
 <br>El volumen se conserva con inclinación`,
@@ -1389,14 +1690,14 @@
 <br>A<sub>lat</sub> = <div class="frac"><span class="frac-numer">6·a·ap</span><span class="frac-denom">2</span></div>
 <br><br>6 caras triangulares laterales`,
                 'bicupula': `Sólido de Johnson J₄₆
-<br><br>Composición:
-<br>• 2 cúpulas pentagonales
-<br>• 1 antiprisma pentagonal
+<br><br>Área: A = (10 + 5√3)a² ≈ 18.66 a²
+<br>Volumen: V ≈ 6.91 a³
+<br><br>Donde:
+<br>a = longitud de la arista
+<br>h = altura total (≈ 1.85a)
 <br><br>Caras:
-<br>• 30 triángulos
-<br>• 12 pentágonos
-<br><br>Simetría: C₅ᵥ
-<br>Grupo puntual pentagonal`,
+<br>• 30 triángulos equiláteros
+<br>• 10 pentágonos regulares`,
                 'capsula': `Volumen: V = πr²(h+<div class="frac"><span class="frac-numer">4r</span><span class="frac-denom">3</span></div>)
 <br><br>Área: A = 2πr(2r+h)
 <br><br>Composición:
@@ -1452,7 +1753,6 @@
 <br>- Las líneas discontinuas marcan base y tapa`
             };
             formulaDiv.innerHTML = formulas[figura] || "Fórmulas no disponibles";
-
             modal.style.display = "flex";
             document.body.style.overflow = 'hidden';
             currentModal = modal;
@@ -1460,7 +1760,6 @@
                 setup3DScene(container, figura);
             }, 100);
         }
-
         function createCuboctahedronGeometry(radius) {
             const vertices = [
                 1, 1, 0,   1, -1, 0,  -1, 1, 0,  -1, -1, 0,
@@ -1472,7 +1771,7 @@
                 4, 8, 6, 4, 6, 10,  5, 11, 7, 5, 7, 9,
                 0, 9, 2, 0, 2, 8,   1, 10, 3, 1, 3, 11,
                 0, 4, 1, 0, 1, 5,   2, 7, 3, 2, 3, 6,
-                0, 4, 8,  0, 5, 9,  1, 10, 4, 1, 5, 11,
+                0, 4, 8,  0, 5, 9,  1, 10, 4,  1, 5, 11,
                 2, 8, 6,  2, 9, 7,  3, 6, 10, 3, 11, 7
             ];
             const geometry = new THREE.BufferGeometry();
@@ -1481,7 +1780,6 @@
             geometry.computeVertexNormals();
             return geometry;
         }
-
         function createObliqueParallelepipedGeometry() {
             const A = [-1.0, 0, 0.5];
             const B = [0, 0, 1.0];
@@ -1491,12 +1789,10 @@
             const F = [2.5, 2.7, -1.3];
             const G = [3.5, 2.7, -1.8];
             const H = [2.5, 2.7, -2.3];
-
             const vertices = new Float32Array([
                 ...A, ...B, ...C, ...D,
                 ...E, ...F, ...G, ...H
             ]);
-
             const indices = [
                 0, 1, 3,  1, 2, 3,
                 4, 5, 7,  5, 6, 7,
@@ -1505,17 +1801,14 @@
                 2, 3, 7,  2, 7, 6,
                 3, 0, 4,  3, 4, 7
             ];
-
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geometry.setIndex(indices);
             geometry.computeVertexNormals();
             return geometry;
         }
-
         function createTruncatedCubeGeometry(radius) {
             const k = Math.sqrt(2) - 1;
-
             const raw = [
                 1, 1, k, 1, 1, -k, 1, -1, k, 1, -1, -k,
                 -1, 1, k, -1, 1, -k, -1, -1, k, -1, -1, -k,
@@ -1525,12 +1818,9 @@
                 -k, 1, 1, -k, 1, -1, -k, -1, 1, -k, -1, -1
             ];
             const verts = raw.map(v => v * radius);
-
             const idx = [];
-
             idx.push(16, 8, 0, 1, 9, 17, 2, 10, 18, 19, 11, 3,
                 4, 12, 20, 21, 13, 5, 22, 14, 6, 7, 15, 23);
-
             function fan(center, ring) {
                 for (let i = 0; i < ring.length - 1; i++) {
                     idx.push(center, ring[i], ring[i + 1]);
@@ -1542,14 +1832,12 @@
             fan(4, [12, 14, 6, 7, 15, 13, 5]);
             fan(16, [0, 1, 17, 21, 5, 4, 20]);
             fan(18, [22, 6, 7, 23, 19, 3, 2]);
-
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
             geometry.setIndex(idx);
             geometry.computeVertexNormals();
             return geometry;
         }
-
         function setup3DScene(container, figura) {
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
@@ -1566,23 +1854,35 @@
                 currentRenderer.dispose();
                 currentRenderer = null;
             }
-
             currentScene = null;
             currentCamera = null;
             currentMesh = null;
-
             container.innerHTML = '<div class="loader"><div class="spinner"></div>Cargando modelo 3D...</div>';
-
             currentScene = new THREE.Scene();
             currentScene.background = new THREE.Color(0x2c3e50);
-            currentCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
-            currentCamera.position.set(6, 5, 8);
-            currentCamera.lookAt(0, 0, 0);
+            
+            if (figura === 'hiperboloide') {
+                const frustumSize = 14;
+                const aspect = container.clientWidth / container.clientHeight;
+                currentCamera = new THREE.OrthographicCamera(
+                    frustumSize * aspect / -2,
+                    frustumSize * aspect / 2,
+                    frustumSize / 2,
+                    frustumSize / -2,
+                    0.1, 1000
+                );
+                currentCamera.position.set(20, 10, 20);
+                currentCamera.lookAt(currentScene.position);
+            } else {
+                currentCamera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+                currentCamera.position.set(6, 5, 8);
+                currentCamera.lookAt(0, 0, 0);
+            }
+            
             currentRenderer = new THREE.WebGLRenderer({ antialias: true });
             currentRenderer.setSize(container.clientWidth, container.clientHeight);
             currentRenderer.setPixelRatio(window.devicePixelRatio);
             currentRenderer.shadowMap.enabled = true;
-
             container.innerHTML = '';
             container.appendChild(currentRenderer.domElement);
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -1594,13 +1894,10 @@
             const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
             directionalLight2.position.set(-5, -5, -5);
             currentScene.add(directionalLight2);
-
             const r = 2.5, h = 5;
-            
             if (figura === 'cilindro_oblicuo') {
                 const geometry = new THREE.CylinderGeometry(r, r, h, 32);
                 geometry.applyMatrix4(shearMatrix);
-
                 const lateralMaterial = new THREE.MeshStandardMaterial({
                     color: 0xa8d5e2,
                     metalness: 0.2,
@@ -1617,13 +1914,11 @@
                 });
                 currentMesh = new THREE.Mesh(geometry, [lateralMaterial, baseMaterial, baseMaterial]);
                 currentScene.add(currentMesh);
-
                 currentScene.add(createModalEdgeCircle(r, h/2, true));
                 currentScene.add(createModalEdgeCircle(r, -h/2, true));
             } else if (figura === 'cono_oblicuo') {
                 const geometry = new THREE.ConeGeometry(r, h, 32);
                 geometry.applyMatrix4(shearMatrix);
-
                 const material = new THREE.MeshStandardMaterial({
                     color: 0xcc9900,
                     metalness: 0.2,
@@ -1633,12 +1928,9 @@
                 });
                 currentMesh = new THREE.Mesh(geometry, material);
                 currentScene.add(currentMesh);
-
                 currentScene.add(createModalEdgeCircle(r, -h/2, true));
-
             } else if (figura === 'barril') {
                 const geometry = createBarrelGeometry(0.7, 1.0, 2.0, 32, 24);
-
                 const mat = new THREE.MeshPhongMaterial({
                     color: 0xa67c52,
                     shininess: 30,
@@ -1647,19 +1939,15 @@
                     opacity: 0.78,
                     depthWrite: false
                 });
-
                 currentMesh = new THREE.Mesh(geometry, mat);
                 currentScene.add(currentMesh);
-
                 const edges = new THREE.EdgesGeometry(geometry, 15);
                 const lineMat = new THREE.LineBasicMaterial({ color: 0x6b4423, linewidth: 2 });
                 const wire = new THREE.LineSegments(edges, lineMat);
                 currentMesh.add(wire);
                 currentCamera.position.set(3.5, 2.5, 4);
-                
             } else if (figura === 'bicupula') {
                 const geometry = createGyroElongatedPentagonalBicupola(1.0, 0.45, 0.95);
-
                 const mat = new THREE.MeshPhongMaterial({
                     color: 0x4aa3ff,
                     shininess: 80,
@@ -1668,73 +1956,79 @@
                     opacity: 0.78,
                     depthWrite: false
                 });
-
                 currentMesh = new THREE.Mesh(geometry, mat);
                 currentScene.add(currentMesh);
-
                 const edges = new THREE.EdgesGeometry(geometry);
                 const lineMat = new THREE.LineBasicMaterial({ color: 0x022b3a, linewidth: 2 });
                 const wire = new THREE.LineSegments(edges, lineMat);
                 currentMesh.add(wire);
-
                 currentMesh.rotation.x = -0.2;
                 currentMesh.rotation.y = 0.6;
                 currentCamera.position.set(4, 3, 5);
             } else if (figura === 'hiperboloide') {
-                const pointsHypModal = [];
-                const numPoints = 20; // Más puntos para mejor suavidad
-                for (let i = 0; i <= numPoints; i++) {
-                    let y = (i / numPoints) * 6 - 3; // y va de -3 a 3, simétrico
-                    let x = Math.sqrt(0.5 + y * y * 0.15) * 0.8; // Fórmula ajustada para mejor forma
-                    pointsHypModal.push(new THREE.Vector2(x, y));
+                const a_hyp = 1.5, b_hyp = 2.0, h_hyp = 8;
+                const radialSegments = 128;
+                const heightSegments = 120;
+                
+                const points = [];
+                for (let i = 0; i <= heightSegments; i++) {
+                    const v = i / heightSegments;
+                    const y = -h_hyp/2 + v * h_hyp;
+                    const radius = a_hyp * Math.sqrt(1 + (y*y)/(b_hyp*b_hyp));
+                    points.push(new THREE.Vector2(radius, y));
                 }
-                const geometry = new THREE.LatheGeometry(pointsHypModal, 32);
-                currentMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
-                    color: 0x87ceeb,
-                    metalness: 0.3,
-                    roughness: 0.5,
-                    flatShading: false,
-                    transparent: true,
-                    opacity: 0.7
-                }));
-                currentScene.add(currentMesh);
                 
-                // Calcular radios en los extremos
-                const y_extreme = 3;
-                const hypModalRadiusTop = Math.sqrt(0.5 + y_extreme * y_extreme * 0.15) * 0.8;
-                const hypModalRadiusBottom = hypModalRadiusTop; // Simétrico
-                
-                // Agregar tapas cerradas al hiperboloide
-                const capMaterial = new THREE.MeshStandardMaterial({
-                    color: 0x87ceeb,
-                    metalness: 0.3,
-                    roughness: 0.5,
+                const geometry = new THREE.LatheGeometry(points, radialSegments);
+                geometry.computeVertexNormals();
+
+                const material = new THREE.MeshStandardMaterial({
+                    color: 0x3498db,
+                    metalness: 0.1,
+                    roughness: 0.2,
                     transparent: true,
-                    opacity: 0.8,
-                    side: THREE.DoubleSide
+                    opacity: 0.5,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
                 });
+
+                currentMesh = new THREE.Mesh(geometry, material);
+                currentScene.add(currentMesh);
+
+                const r_bot = a_hyp * Math.sqrt(1 + ((-h_hyp/2)*(-h_hyp/2))/(b_hyp*b_hyp));
+                const r_top = a_hyp * Math.sqrt(1 + ((h_hyp/2)*(h_hyp/2))/(b_hyp*b_hyp));
                 
-                const capTopGeometry = new THREE.CircleGeometry(hypModalRadiusTop, 32);
-                const capTop = new THREE.Mesh(capTopGeometry, capMaterial);
-                capTop.rotation.x = Math.PI / 2;
-                capTop.position.y = 3;
-                currentScene.add(capTop);
+                const capMat = material.clone();
+                const bottomCap = new THREE.Mesh(new THREE.CircleGeometry(r_bot, 64), capMat);
+                bottomCap.rotation.x = Math.PI / 2; 
+                bottomCap.position.y = -h_hyp/2; 
+                currentScene.add(bottomCap);
                 
-                const capBottomGeometry = new THREE.CircleGeometry(hypModalRadiusBottom, 32);
-                const capBottom = new THREE.Mesh(capBottomGeometry, capMaterial);
-                capBottom.rotation.x = Math.PI / 2;
-                capBottom.position.y = -3;
-                currentScene.add(capBottom);
+                const topCap = new THREE.Mesh(new THREE.CircleGeometry(r_top, 64), capMat.clone());
+                topCap.rotation.x = Math.PI / 2; 
+                topCap.position.y = h_hyp/2; 
+                currentScene.add(topCap);
                 
-                currentScene.add(createSimpleModalEdgeCircle(hypModalRadiusTop, 3, true));
-                currentScene.add(createSimpleModalEdgeCircle(hypModalRadiusBottom, -3, true));
+                function createCircleEdge(radius, yPos) {
+                    const pts = [];
+                    for (let i = 0; i <= 64; i++) {
+                        const theta = (i / 64) * Math.PI * 2;
+                        pts.push(Math.cos(theta) * radius, yPos, Math.sin(theta) * radius);
+                    }
+                    const geo = new THREE.BufferGeometry().setAttribute('position', 
+                        new THREE.Float32BufferAttribute(pts, 3));
+                    return new THREE.Line(geo, new THREE.LineBasicMaterial({ 
+                        color: 0xffffff, 
+                        transparent: true, 
+                        opacity: 0.8 
+                    }));
+                }
+                
+                currentScene.add(createCircleEdge(r_bot, -h_hyp/2));
+                currentScene.add(createCircleEdge(r_top, h_hyp/2));
             } else if (figura === 'tronco_esfera') {
-                // Radio de la esfera
                 const R = 3;
-                // Ángulos de corte: centrado en el ecuador, de 45° a 135°
-                const thetaStart = Math.PI * 45 / 180; // 45°
-                const thetaLength = Math.PI * 90 / 180; // 90° de apertura
-                
+                const thetaStart = Math.PI * 45 / 180;
+                const thetaLength = Math.PI * 90 / 180;
                 const geometry = new THREE.SphereGeometry(R, 32, 32, 0, Math.PI * 2, thetaStart, thetaLength);
                 currentMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
                     color: 0x2ecc71,
@@ -1745,17 +2039,10 @@
                     opacity: 0.75
                 }));
                 currentScene.add(currentMesh);
-                
-                // Calcular radios y posiciones exactas de las tapas
-                // Tapa superior (corte a 45°)
                 const r_top_modal = R * Math.sin(thetaStart);
                 const y_top_modal = R * Math.cos(thetaStart);
-                
-                // Tapa inferior (corte a 135°)
                 const r_bottom_modal = R * Math.sin(thetaStart + thetaLength);
                 const y_bottom_modal = R * Math.cos(thetaStart + thetaLength);
-                
-                // Agregar tapas cerradas al tronco de esfera
                 const capMaterial = new THREE.MeshStandardMaterial({
                     color: 0x2ecc71,
                     metalness: 0.3,
@@ -1764,22 +2051,16 @@
                     opacity: 0.8,
                     side: THREE.DoubleSide
                 });
-                
-                // Tapa superior
                 const capTopGeometry = new THREE.CircleGeometry(r_top_modal, 32);
                 const capTop = new THREE.Mesh(capTopGeometry, capMaterial);
                 capTop.rotation.x = Math.PI / 2;
                 capTop.position.y = y_top_modal;
                 currentScene.add(capTop);
-                
-                // Tapa inferior
                 const capBottomGeometry = new THREE.CircleGeometry(r_bottom_modal, 32);
                 const capBottom = new THREE.Mesh(capBottomGeometry, capMaterial);
                 capBottom.rotation.x = Math.PI / 2;
                 capBottom.position.y = y_bottom_modal;
                 currentScene.add(capBottom);
-                
-                // Bordes discontinuos
                 currentScene.add(createSimpleModalEdgeCircle(r_top_modal, y_top_modal, true));
                 currentScene.add(createSimpleModalEdgeCircle(r_bottom_modal, y_bottom_modal, true));
             } else {
@@ -1926,7 +2207,7 @@
                         break;
                     case 'esferoide':
                         geometry = new THREE.SphereGeometry(2.5, 32, 32);
-                        geometry.scale(1, 1.5, 1); // Prolato: alargado verticalmente
+                        geometry.scale(1, 1.5, 1);
                         currentMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
                             color: 0xe91e63,
                             metalness: 0.3,
@@ -1938,7 +2219,7 @@
                         break;
                     case 'esferoide_oblato':
                         geometry = new THREE.SphereGeometry(2.5, 32, 32);
-                        geometry.scale(1.5, 0.7, 1.5); // Oblato: achatado verticalmente, más ancho
+                        geometry.scale(1.5, 0.7, 1.5);
                         currentMesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
                             color: 0x9b59b6,
                             metalness: 0.3,
@@ -1959,14 +2240,12 @@
                             opacity: 0.7
                         }));
                 }
-
                 if (geometry && figura !== 'capsula' && figura !== 'esferoide' && figura !== 'esferoide_oblato' && figura !== 'hiperboloide' && figura !== 'tronco_esfera') {
                     const edgesGeometry = new THREE.EdgesGeometry(geometry);
                     let edgeColor = 0x000000;
                     if(figura === 'cuboctaedro') edgeColor = 0x003300;
                     if(figura === 'paralelepipedo_oblicuo') edgeColor = 0x003344;
                     if(figura === 'cubo_truncado') edgeColor = 0x0e6655;
-
                     const edgesMaterial = new THREE.LineBasicMaterial({
                         color: edgeColor,
                         linewidth: (figura === 'cuboctaedro' || figura === 'paralelepipedo_oblicuo' || figura === 'cubo_truncado') ? 2 : 3
@@ -1975,11 +2254,10 @@
                     currentMesh.add(edges);
                 }
             }
-
             currentMesh.castShadow = true;
             currentMesh.receiveShadow = true;
             currentScene.add(currentMesh);
-
+            addDimensionLines(currentScene, figura, currentMesh);
             currentControls = new THREE.OrbitControls(currentCamera, currentRenderer.domElement);
             currentControls.enableDamping = true;
             currentControls.dampingFactor = 0.05;
@@ -1987,11 +2265,9 @@
             currentControls.minDistance = 3;
             currentControls.maxDistance = 20;
             currentControls.maxPolarAngle = Math.PI;
-
             if (figura === 'paralelepipedo_oblicuo') {
                  currentControls.target.set(1.5, 1.35, -0.6);
             }
-
             function animate() {
                 animationFrameId = requestAnimationFrame(animate);
                 currentControls.update();
@@ -2002,14 +2278,22 @@
                 if (currentCamera && currentRenderer && container && currentModal && currentModal.style.display === 'flex') {
                     const width = container.clientWidth;
                     const height = container.clientHeight;
-                    currentCamera.aspect = width / height;
+                    if (currentCamera.isOrthographicCamera) {
+                         const frustumSize = 14; 
+                         const aspect = width / height;
+                         currentCamera.left = -frustumSize * aspect / 2;
+                         currentCamera.right = frustumSize * aspect / 2;
+                         currentCamera.top = frustumSize / 2;
+                         currentCamera.bottom = -frustumSize / 2;
+                    } else {
+                        currentCamera.aspect = width / height;
+                    }
                     currentCamera.updateProjectionMatrix();
                     currentRenderer.setSize(width, height);
                 }
             };
             window.addEventListener('resize', handleResize);
         }
-
         function close3DModal() {
             const modal = document.getElementById('modal3D');
             if (modal) {
@@ -2038,7 +2322,6 @@
             currentModal = null;
             document.body.style.overflow = 'auto';
         }
-
         window.onclick = function(event) {
             if (event.target === document.getElementById('modal')) {
                 closeModal();
@@ -2046,7 +2329,6 @@
                 close3DModal();
             }
         };
-
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 if (currentModal) {
